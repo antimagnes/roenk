@@ -1,54 +1,47 @@
 package hu.frigo.roenk
 
+import javafx.beans.property.ReadOnlyObjectWrapper
 import javafx.collections.FXCollections
 import javafx.scene.Scene
+import javafx.scene.control.Alert
+import javafx.scene.control.ButtonType
 import javafx.scene.control.TableColumn
 import javafx.scene.control.TableView
-import javafx.scene.control.cell.PropertyValueFactory
 import javafx.scene.layout.BorderPane
 import javafx.stage.Stage
-import java.util.Arrays
+import javafx.util.Callback
 
-class LogWindow(file: String, lineRegExp: String, groupToKeyMap: Map<Int, String>) {
+class LogWindow(val logEntries: List<LogEntry>) {
 
-    internal var dtf = DateTimeFormatter.ofPattern("H:mm:ss,SSS")
+    internal lateinit var stage: Stage
 
-    internal var stage: Stage
-    internal var file: String
-
-    internal var logTable: TableView<LogEntry>
+    internal lateinit var logTable: TableView<LogEntry>
     internal val logTableData = FXCollections.observableArrayList<LogEntry>()
 
     init {
-        val encodingToResultMap = LogReader.processLogFile(file, lineRegExp, groupToKeyMap)
-        if (!encodingToResultMap.isEmpty()) {
-            this.file = file
-            this.stage = Stage()
-            val root = BorderPane()
-            stage.scene = Scene(root, 1024.0, 768.0)
+        this.stage = Stage()
+        val root = BorderPane()
+        stage.scene = Scene(root, 1024.0, 768.0)
 
-            root.setCenter(logTable = TableView<LogEntry>())
-            val lineCol = TableColumn<LogEntry, Long>("Line")
-            lineCol.setCellValueFactory(PropertyValueFactory<LogEntry, Long>("line"))
-            lineCol.setPrefWidth(100.0)
-            val timeStampCol = TableColumn<LogEntry, Long>("TimeStamp")
-            timeStampCol.setCellValueFactory(PropertyValueFactory<LogEntry, Long>("timestamp"))
-            timeStampCol.setPrefWidth(100.0)
-            val levelCol = TableColumn<LogEntry, String>("Level")
-            levelCol.setCellValueFactory(PropertyValueFactory<LogEntry, String>("level"))
-            levelCol.setPrefWidth(100.0)
-            val logStringCol = TableColumn<LogEntry, String>("LogString")
-            logStringCol.setCellValueFactory(PropertyValueFactory<LogEntry, String>("logString"))
-            logStringCol.setPrefWidth(1000.0)
+        logTable = TableView<LogEntry>()
+        root.center = logTable
+        val lineCol = TableColumn<LogEntry, Long>("Line")
+        lineCol.cellValueFactory = Callback { p -> ReadOnlyObjectWrapper(p.value.line) }
+        lineCol.prefWidth = 100.0
+        val timeStampCol = TableColumn<LogEntry, Long>("TimeStamp")
+        timeStampCol.cellValueFactory = Callback { p -> ReadOnlyObjectWrapper(p.value.timestamp) }
+        timeStampCol.prefWidth = 100.0
+        val levelCol = TableColumn<LogEntry, String>("Level")
+        levelCol.cellValueFactory = Callback { p -> ReadOnlyObjectWrapper(p.value.level) }
+        levelCol.prefWidth = 100.0
+        val logStringCol = TableColumn<LogEntry, String>("LogString")
+        logStringCol.cellValueFactory = Callback { p -> ReadOnlyObjectWrapper(p.value.logString) }
+        logStringCol.prefWidth = 1000.0
 
-            Arrays.asList(lineCol, timeStampCol, levelCol, logStringCol).forEach { v -> logTable.columns.add(v) }
-            logTable.setItems(logTableData)
-            val encoding = encodingToResultMap.keys.stream().findFirst().get()
-            stage.title = "$file <$encoding>"
-            logTableData.addAll(encodingToResultMap[encoding])
-            stage.show()
-        } else {
-            Alert(Alert.AlertType.ERROR, "Cannot load " + file, ButtonType.OK).show()
-        }
+        listOf(lineCol, timeStampCol, levelCol, logStringCol).forEach { v -> logTable.columns.add(v) }
+        logTable.items = logTableData
+        stage.title = "file <encoding>"
+        logTableData.addAll(logEntries)
+        stage.show()
     }
 }

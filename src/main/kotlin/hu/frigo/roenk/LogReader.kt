@@ -1,49 +1,75 @@
-//package hu.frigo.roenk
-//
-//import java.nio.file.Paths
-//import java.util.AbstractMap
-//import java.util.ArrayList
-//import java.util.Arrays
-//import java.util.Collections
-//import java.util.HashMap
-//import java.util.regex.Pattern
-//
-//object LogReader {
-//
-//    fun processLogFile(filename: String, lineRegexp: String,
-//                       groupToKeyMap: Map<Int, String>): Map<String, List<Map<String, String>>> {
-//        val l = HashMap<Long, String>()
-//        var encodingSuccess: String? = null
-//        for (encoding in Arrays.asList("UTF-8", "ISO-8859-1", "ISO-8859-2")) {
-//            println("reading using encoding = " + encoding)
-//            encodingSuccess = encoding
-//
-//            Paths.get(filename).toFile().readLines().mapIndexed { i, s -> Pair(i, s) }
-//        }
-//    }
-//
-//    private fun processDaList(l: MutableMap<Long, String>, lineRegexp: String,
-//                              groupToKeyMap: Map<Int, String>): Map<Long, Map<String, String>> {
-//        val pat = Pattern.compile(lineRegexp)
-//
-//        val mpn = LongStream.range(0, java.lang.Long.valueOf(l.keys.size.toLong())!!).sorted().boxed().collect<List<Long>, Any>(Collectors.toList<Long>())
-//
-//        var cle: LogEntry? = null
-//        val iteratorList = ArrayList(l)
-//        for (le in iteratorList) {
-//            val matcher = pat.matcher(le.getLogString())
-//            if (matcher.find()) {
-//                groupToKeyMap.entries.stream().collect(Collectors.toMap<Entry<Int, String>, String, String>(Function<Entry<Int, String>, String> { it.value }) { e -> matcher.group(e.key) })
-//                cle = le
-//            } else {
-//                if (cle == null) {
-//                    cle = LogEntry(-1L, -1L, "PLACEHOLDER", "File begin")
-//                    l.add(0, cle)
-//                }
-//                cle.addNonLogLine(le.getLogString())
-//                l.remove(le)
-//            }
-//        }
-//        return l
-//    }
-//}
+package hu.frigo.roenk
+
+import hu.frigo.roenk.LogValues.LEVEL
+import hu.frigo.roenk.LogValues.LOGSTRING
+import hu.frigo.roenk.LogValues.TIMESTAMP
+import java.nio.file.Paths
+import java.time.LocalDateTime
+import java.time.LocalTime
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
+import java.util.Arrays
+
+object LogReader {
+
+    internal var dtf = DateTimeFormatter.ofPattern("H:mm:ss,SSS")
+
+    fun processLogFile(filename: String, lineRegexp: Regex, groupToKeyMap: Map<Int, LogValues>):
+            List<LogEntry> {
+        val toReturn = mutableListOf<LogEntry>()
+        val l = mutableMapOf<Long, String>()
+
+        for (encoding in Arrays.asList("UTF-8", "ISO-8859-1", "ISO-8859-2")) {
+            println("reading using encoding = " + encoding)
+
+            Paths.get(filename).toFile().readLines().forEachIndexed { i, s -> l.put(i.toLong(), s) }
+            break
+        }
+
+        var cle: LogEntry
+        var remainingMap = mutableMapOf<Long, String>()
+        remainingMap.putAll(l)
+
+
+        if (remainingMap.entries.sortedBy { it.key }.first().value.matches(lineRegexp)) {
+            val (firstLineNumber, firstVal) = remainingMap.entries.sortedBy { it.key }.first()
+            cle = logEntry(firstLineNumber, firstVal, groupToKeyMap, lineRegexp)
+            remainingMap.remove(firstLineNumber)
+        } else {
+            cle = LogEntry(-1, -1, "-", "beginning of file")
+        }
+        toReturn.add(cle)
+
+        while (!remainingMap.isEmpty() && remainingMap.entries.find{ it.value.matches(lineRegexp) } != null) {
+            val sortedEntries = remainingMap.entries.sortedBy { it.key }
+            val (lineNumber, lineString) = sortedEntries.find { it.value.matches(lineRegexp) }!!
+            if ( lineNumber != sortedEntries.first().key ) {
+                cle.nonLogLines.addAll(sortedEntries.filter { it.key < lineNumber }.map { it.value })
+            }
+            cle = logEntry(lineNumber, lineString, groupToKeyMap, lineRegexp)
+            toReturn.add(cle)
+            sortedEntries.filter { it.key <= lineNumber }.forEach { remainingMap.remove(it.key) }
+            println("remainingMap ${remainingMap.size}")
+        }
+
+        println(toReturn)
+        return toReturn
+    }
+
+    private fun logEntry(lineNumber: Long, lineString: String, groupToKeyMap: Map<Int, LogValues>, lineRegexp: Regex):
+            LogEntry {
+        val matcher = lineRegexp.toPattern().matcher(lineString)
+        matcher.find()
+        val results = groupToKeyMap.entries.map {
+            Pair<LogValues, String>(it.value,
+                    try { matcher.group(it.key) } catch (e: IllegalStateException) { print("Hopp")
+                        "nomatch " +
+                            "$lineNumber : " +
+                            "\"$lineString\" ${it.key} - ${it.value}" })
+                    }.toMap()
+        return LogEntry(lineNumber,
+                LocalTime.parse(results[TIMESTAMP]!!, dtf).toNanoOfDay(),
+                results[LEVEL]!!,
+                results[LOGSTRING]!!)
+    }
+}

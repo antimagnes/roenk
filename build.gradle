@@ -2,12 +2,14 @@ apply plugin: 'kotlin'
 
 repositories {
     mavenLocal()
-
+    mavenCentral()
+}
 
 buildscript {
     ext.kotlin_version = '1.0.1-2'
     repositories {
         mavenLocal()
+        mavenCentral()
    }
 
     dependencies {

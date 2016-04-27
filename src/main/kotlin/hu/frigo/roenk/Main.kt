@@ -1,5 +1,8 @@
 package hu.frigo.roenk
 
+import hu.frigo.roenk.LogValues.LEVEL
+import hu.frigo.roenk.LogValues.LOGSTRING
+import hu.frigo.roenk.LogValues.TIMESTAMP
 import javafx.application.Application
 import javafx.scene.Scene
 import javafx.scene.control.Button
@@ -33,7 +36,12 @@ class Main : Application() {
         }
         buttonBox.children.add(selectFile)
         readFile = Button("Read it")
-        readFile.setOnAction { e -> LogWindow(filename.text, LINE_REGEX, GROUP_TO_KEY_MAP) }
+
+        readFile.setOnAction { e -> LogWindow(LogReader.processLogFile(filename.text, LINE_REGEX, GROUP_TO_KEY_MAP)) }
+
+//    } else {
+//        Alert(ERROR, "Cannot load " + file, ButtonType.OK).show()
+//    }
         buttonBox.children.add(readFile)
         rootV.children.add(buttonBox)
 
@@ -42,12 +50,11 @@ class Main : Application() {
     }
 
     companion object {
-
-        private val LINE_REGEX = "^(\\d{1,2}:\\d{2}:\\d{2},\\d{3}) *([A-Z]*) *(.*)"
-        val GROUP_TO_KEY_MAP = mapOf(Pair(1, "TIMESTAMP"), Pair(2, "LEVEL"), Pair(3, "LOGSTRING"))
+        val LINE_REGEX = Regex("""^(\d{1,2}:\d{2}:\d{2},\d{3}) *([A-Z]*) *(.*)""")
+        val GROUP_TO_KEY_MAP = mapOf(Pair(1, TIMESTAMP), Pair(2, LEVEL), Pair(3, LOGSTRING))
 
         @JvmStatic fun main(args: Array<String>) {
-            Application.launch(*args)
+            Application.launch(Main::class.java, *args)
         }
     }
 }
