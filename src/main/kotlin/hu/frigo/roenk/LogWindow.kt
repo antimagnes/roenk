@@ -3,15 +3,13 @@ package hu.frigo.roenk
 import javafx.beans.property.ReadOnlyObjectWrapper
 import javafx.collections.FXCollections
 import javafx.scene.Scene
-import javafx.scene.control.Alert
-import javafx.scene.control.ButtonType
 import javafx.scene.control.TableColumn
 import javafx.scene.control.TableView
 import javafx.scene.layout.BorderPane
 import javafx.stage.Stage
 import javafx.util.Callback
 
-class LogWindow(val logEntries: List<LogEntry>) {
+class LogWindow(val title: String, val logEntries: List<LogEntry>) {
 
     internal lateinit var stage: Stage
 
@@ -40,7 +38,7 @@ class LogWindow(val logEntries: List<LogEntry>) {
 
         listOf(lineCol, timeStampCol, levelCol, logStringCol).forEach { v -> logTable.columns.add(v) }
         logTable.items = logTableData
-        stage.title = "file <encoding>"
+        stage.title = title
         logTableData.addAll(logEntries)
         stage.show()
     }

@@ -21,10 +21,9 @@ class Main : Application() {
     @Throws(Exception::class)
     override fun start(primaryStage: Stage) {
         val root = BorderPane()
-        primaryStage.title = "Hello World"
         primaryStage.scene = Scene(root)
         val rootV = VBox()
-        filename = TextField("/home/frigo/tooldev/roenk/src/main/resources/bef-set-with-op-fop-view-close-reopen-shutdown.WP1.txt")
+        filename = TextField("/home/frigo/tooldev/roenk.kt/tmp/bef-set-with-op-fop-view-close-reopen-shutdown.WP1.txt")
         rootV.children.add(filename)
         val buttonBox = HBox()
         selectFile = Button("Select it")
@@ -37,7 +36,11 @@ class Main : Application() {
         buttonBox.children.add(selectFile)
         readFile = Button("Read it")
 
-        readFile.setOnAction { e -> LogWindow(LogReader.processLogFile(filename.text, LINE_REGEX, GROUP_TO_KEY_MAP)) }
+        readFile.setOnAction { e -> run {
+            val (title, entries) = LogReader.processLogFile(filename.text, LINE_REGEX, GROUP_TO_KEY_MAP)
+            LogWindow("${filename.text} <$title>", entries)
+            }
+        }
 
 //    } else {
 //        Alert(ERROR, "Cannot load " + file, ButtonType.OK).show()

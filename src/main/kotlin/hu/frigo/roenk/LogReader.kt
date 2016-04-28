@@ -4,25 +4,26 @@ import hu.frigo.roenk.LogValues.LEVEL
 import hu.frigo.roenk.LogValues.LOGSTRING
 import hu.frigo.roenk.LogValues.TIMESTAMP
 import java.nio.file.Paths
-import java.time.LocalDateTime
 import java.time.LocalTime
-import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.util.Arrays
+
+data class LogContent(val encoding: String, val entries: List<LogEntry>)
 
 object LogReader {
 
     internal var dtf = DateTimeFormatter.ofPattern("H:mm:ss,SSS")
 
-    fun processLogFile(filename: String, lineRegexp: Regex, groupToKeyMap: Map<Int, LogValues>):
-            List<LogEntry> {
+    fun processLogFile(filename: String, lineRegexp: Regex, groupToKeyMap: Map<Int, LogValues>): LogContent {
         val toReturn = mutableListOf<LogEntry>()
         val l = mutableMapOf<Long, String>()
 
+        var encodingUsed: String = ""
         for (encoding in Arrays.asList("UTF-8", "ISO-8859-1", "ISO-8859-2")) {
             println("reading using encoding = " + encoding)
 
             Paths.get(filename).toFile().readLines().forEachIndexed { i, s -> l.put(i.toLong(), s) }
+            encodingUsed = encoding
             break
         }
 
@@ -53,7 +54,7 @@ object LogReader {
         }
 
         println(toReturn)
-        return toReturn
+        return LogContent(encodingUsed, toReturn)
     }
 
     private fun logEntry(lineNumber: Long, lineString: String, groupToKeyMap: Map<Int, LogValues>, lineRegexp: Regex):
